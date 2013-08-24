@@ -31,7 +31,7 @@ import org.neo4j.cypher.internal.commands.expressions.Expression
 import org.neo4j.graphdb.{Node, Relationship, PropertyContainer}
 import org.neo4j.cypher.internal.commands.AstNode
 import org.neo4j.cypher.internal.ExecutionContext
-import org.neo4j.cypher.internal.commands.values.UnboundValue
+import org.neo4j.cypher.internal.commands.values.IsUnknown
 
 trait UpdateAction extends TypeSafe with AstNode[UpdateAction] {
 
@@ -48,13 +48,13 @@ trait UpdateAction extends TypeSafe with AstNode[UpdateAction] {
 
 object UpdateActionHelper {
   def isUnbound(n: String)(context: ExecutionContext): Boolean = try {
-    UnboundValue.is(context(n))
+    IsUnknown(context(n))
   } catch {
     case (x: NoSuchElementException) => false
   }
 
   def isUnbound(n: Expression)(context: ExecutionContext, state: QueryState): Boolean = try {
-    UnboundValue.is(n(context)(state))
+    IsUnknown(n(context)(state))
   } catch {
     case (x: NoSuchElementException)              => false
     case (x: org.neo4j.graphdb.NotFoundException) => false

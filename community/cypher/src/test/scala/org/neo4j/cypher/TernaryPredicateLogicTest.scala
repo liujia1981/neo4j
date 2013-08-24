@@ -17,16 +17,26 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.neo4j.cypher.internal.commands.values
+package org.neo4j.cypher
 
-/**
- * This singleton value represents unbound entities inside expressions or predicates.
- *
- * It currently only may occur due to patterns containing optional relationships which may introduce
- * unbound identifiers.  It mainly serves to differentiate this situation from plain null values.
- */
-case object UnboundValue {
-  def is(v: Any): Boolean = v == this
+import org.scalatest.Assertions
+import org.neo4j.cypher.internal.commands.expressions.Identifier
+import org.neo4j.cypher.internal.ExecutionContext
+import org.junit.{Ignore, Test}
+import org.neo4j.cypher.internal.commands.Equals
+import org.neo4j.cypher.internal.commands.values.IsUnknown
 
-  override def toString = "UNBOUND_VALUE"
+class TernaryPredicateLogicTest extends Assertions {
+
+  @Test @Ignore
+  def should_evaluate_equal_of_unknowns_as_unknown() {
+    // given
+    val ctx = ExecutionContext.from("a" -> IsUnknown, "b" -> IsUnknown)
+
+    // when
+    val predicate = Equals(Identifier("a"), Identifier("b"))
+
+    // then
+    assert( IsUnknown === predicate(ctx)(null) )
+  }
 }

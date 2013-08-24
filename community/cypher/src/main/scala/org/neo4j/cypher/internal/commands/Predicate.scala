@@ -26,7 +26,7 @@ import org.neo4j.cypher.CypherTypeException
 import org.neo4j.cypher.internal.helpers.{CastSupport, IsCollection, CollectionSupport}
 import org.neo4j.cypher.internal.ExecutionContext
 import org.neo4j.cypher.internal.pipes.QueryState
-import org.neo4j.cypher.internal.commands.values.{UnboundValue, KeyToken}
+import org.neo4j.cypher.internal.commands.values.{IsUnknown, KeyToken}
 
 abstract class Predicate extends Expression {
   def apply(ctx: ExecutionContext)(implicit state: QueryState) = isMatch(ctx)
@@ -60,7 +60,7 @@ case class NullablePredicate(inner: Predicate, exp: Seq[(Expression, Boolean)]) 
     val nullValue = exp.find {
       case (e, res) =>
         val eVal = e(m)
-        eVal == null || UnboundValue.is(eVal)
+        eVal == null || IsUnknown(eVal)
     }
 
     nullValue match {
@@ -210,9 +210,9 @@ case class HasRelationship(from: Expression, dir: Direction, relType: Seq[String
 
 case class IsNull(expression: Expression) extends Predicate {
   def isMatch(m: ExecutionContext)(implicit state: QueryState): Boolean = expression(m) match {
-    case null         => true
-    case UnboundValue => true
-    case _            => false
+    case null      => true
+    case IsUnknown => true
+    case _         => false
   }
 
   override def toString(): String = expression + " IS NULL"
@@ -240,7 +240,7 @@ case class Has(identifier: Expression, propertyKey: KeyToken) extends Predicate 
     case pc: Node         => propertyKey.getOptId(state.query).exists(state.query.nodeOps.hasProperty(pc, _))
     case pc: Relationship => propertyKey.getOptId(state.query).exists(state.query.relationshipOps.hasProperty(pc, _))
     case null             => false
-    case UnboundValue     => false
+    case IsUnknown        => false
     case _                => throw new CypherTypeException("Expected " + identifier + " to be a property container.")
   }
 
@@ -329,7 +329,7 @@ case class HasLabel(entity: Expression, label: KeyToken) extends Predicate with 
 
   def isMatch(m: ExecutionContext)(implicit state: QueryState): Boolean = entity(m) match {
 
-    case UnboundValue =>
+    case IsUnknown =>
       true
 
     case null =>

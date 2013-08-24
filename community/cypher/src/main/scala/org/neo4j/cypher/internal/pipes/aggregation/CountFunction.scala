@@ -22,7 +22,7 @@ package org.neo4j.cypher.internal.pipes.aggregation
 import org.neo4j.cypher.internal.commands.expressions.Expression
 import org.neo4j.cypher.internal.ExecutionContext
 import org.neo4j.cypher.internal.pipes.QueryState
-import org.neo4j.cypher.internal.commands.values.UnboundValue
+import org.neo4j.cypher.internal.commands.values.IsUnknown
 
 class CountFunction(value: Expression) extends AggregationFunction {
   var count: Long = 0
@@ -30,7 +30,7 @@ class CountFunction(value: Expression) extends AggregationFunction {
   def apply(data: ExecutionContext)(implicit state: QueryState) {
     value(data) match {
       case null         =>
-      case UnboundValue =>
+      case IsUnknown =>
       case _            => count += 1
     }
   }

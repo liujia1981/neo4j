@@ -24,7 +24,7 @@ import org.neo4j.cypher.internal.commands.Predicate
 import collection.Map
 import org.neo4j.cypher.internal.ExecutionContext
 import org.neo4j.cypher.internal.pipes.QueryState
-import org.neo4j.cypher.internal.commands.values.UnboundValue
+import org.neo4j.cypher.internal.commands.values.IsUnknown
 
 class PatterMatchingBuilder(patternGraph: PatternGraph, predicates: Seq[Predicate]) extends MatcherBuilder {
   def getMatches(sourceRow: ExecutionContext, state:QueryState): Traversable[ExecutionContext] = {
@@ -70,7 +70,7 @@ class PatterMatchingBuilder(patternGraph: PatternGraph, predicates: Seq[Predicat
   }
 
   private def createNullValuesForOptionalElements(matchedGraph: ExecutionContext): ExecutionContext = {
-    val m = (patternGraph.keySet -- matchedGraph.keySet).map(_ -> UnboundValue).toStream
+    val m = (patternGraph.keySet -- matchedGraph.keySet).map(_ -> IsUnknown).toStream
     matchedGraph.newWith(m)
   }
 
