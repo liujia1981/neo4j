@@ -21,10 +21,9 @@ package org.neo4j.cypher.internal.commands.values
 
 sealed abstract class Ternary(val isKnown: Boolean, val isTrue: Boolean, val isFalse: Boolean)
   extends (Any => Boolean) {
-  val inversed: Ternary
+  val negated: Ternary
+  val isTrueOrUnknown: Boolean = isTrue
 
-  def isTrueOrElse(orElse: Boolean): Boolean = isTrue || orElse
-  def isFalseOrElse(orElse: Boolean): Boolean = isFalse || orElse
   def toKnownOption: Option[Ternary] = if (isKnown) Some(this) else None
   def and(other: Ternary): Ternary
   def or(other: Ternary): Ternary
@@ -33,9 +32,9 @@ sealed abstract class Ternary(val isKnown: Boolean, val isTrue: Boolean, val isF
 }
 
 object Ternary {
-  def fromBoolean(b: Boolean) = if (b) IsTrue else IsFalse
-  def fromValue(v: Any): Ternary = v match {
-    case b: Boolean => fromBoolean(b)
+  def apply(b: Boolean) = if (b) IsTrue else IsFalse
+  def apply(v: Any): Ternary = v match {
+    case b: Boolean => apply(b)
     case v: Ternary => v
     case _          => IsUnknown
   }
@@ -44,25 +43,25 @@ object Ternary {
 }
 
 object IsKnown {
-  def unapply(v: Any) = Ternary.fromValue(v).toKnownOption
+  def unapply(v: Any) = Ternary(v).toKnownOption
 }
 
 case object IsTrue extends Ternary(isKnown = true, isTrue = true, isFalse = false) {
-  override val inversed: Ternary = IsFalse
+  override val negated: Ternary = IsFalse
 
   override def and(other: Ternary): Ternary = other
   override def or(other: Ternary): Ternary = IsTrue
-  override def xor(other: Ternary): Ternary = if (other.isKnown) Ternary.fromBoolean(other.isFalse) else IsUnknown
+  override def xor(other: Ternary): Ternary = if (other.isKnown) Ternary(other.isFalse) else IsUnknown
   override def apply(other: Any): Boolean = true == other || IsTrue == other
   override def toString() = "true"
 }
 
 case object IsFalse extends Ternary(isKnown = true, isTrue = false, isFalse = true) {
-  override val inversed: Ternary = IsTrue
+  override val negated: Ternary = IsTrue
 
   override def and(other: Ternary): Ternary = IsFalse
   override def or(other: Ternary): Ternary = other
-  override def xor(other: Ternary): Ternary = if (other.isKnown) Ternary.fromBoolean(other.isTrue) else IsUnknown
+  override def xor(other: Ternary): Ternary = if (other.isKnown) Ternary(other.isTrue) else IsUnknown
   override def apply(other: Any): Boolean = false == other || IsFalse == other
   override def toString() = "false"
 }
@@ -74,10 +73,9 @@ case object IsFalse extends Ternary(isKnown = true, isTrue = false, isFalse = tr
  * unbound identifiers.  It mainly serves to differentiate this situation from plain null values.
  */
 case object IsUnknown extends Ternary(isKnown = false, isTrue = false, isFalse = false) {
-  override val inversed: Ternary = IsUnknown
+  override val negated: Ternary = IsUnknown
+  override val isTrueOrUnknown: Boolean = true
 
-  override def isTrueOrElse(orElse: Boolean): Boolean = orElse
-  override def isFalseOrElse(orElse: Boolean): Boolean = orElse
   override def and(other: Ternary): Ternary = if (other.isFalse) IsFalse else IsUnknown
   override def or(other: Ternary): Ternary = if (other.isTrue) IsTrue else IsUnknown
   override def xor(other: Ternary): Ternary = IsUnknown

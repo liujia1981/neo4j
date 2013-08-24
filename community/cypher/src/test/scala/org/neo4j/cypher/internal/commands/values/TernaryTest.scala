@@ -33,9 +33,9 @@ class TernaryTest extends Assertions {
 
   @Test
   def should_compute_ternary_inversed() {
-    assert(IsTrue === IsFalse.inversed)
-    assert(IsFalse === IsTrue.inversed)
-    assert(IsUnknown === IsUnknown.inversed)
+    assert(IsTrue === IsFalse.negated)
+    assert(IsFalse === IsTrue.negated)
+    assert(IsUnknown === IsUnknown.negated)
   }
 
   @Test
@@ -98,17 +98,10 @@ class TernaryTest extends Assertions {
         assert((a `xor` b) === (b `xor` a))
   }
 
-
   @Test
-  def should_compute_isTrueOrElse() {
+  def should_compute_isTrueOrUnknown() {
     for (a <- Ternary.values)
-      assert(a.isTrueOrElse(orElse = false) == a.isTrue)
-  }
-
-  @Test
-  def should_compute_isFalseOrElse() {
-    for (a <- Ternary.values)
-      assert(a.isFalseOrElse(orElse = false) == a.isFalse)
+      assert( (a.isTrue || !a.isKnown) === a.isTrueOrUnknown)
   }
 
   @Test
@@ -119,19 +112,19 @@ class TernaryTest extends Assertions {
 
   @Test
   def should_convert_fromBoolean() {
-    assert(IsTrue === Ternary.fromBoolean(b = true))
-    assert(IsFalse === Ternary.fromBoolean(b = false))
+    assert(IsTrue === Ternary(b = true))
+    assert(IsFalse === Ternary(b = false))
   }
 
   @Test
   def should_convert_fromValue() {
-    assert(IsTrue === Ternary.fromValue(v = true))
-    assert(IsTrue === Ternary.fromValue(v = IsTrue))
-    assert(IsFalse === Ternary.fromValue(v = false))
-    assert(IsFalse === Ternary.fromValue(v = IsFalse))
-    assert(IsUnknown === Ternary.fromValue(v = IsUnknown))
-    assert(IsUnknown === Ternary.fromValue(v = null))
-    assert(IsUnknown === Ternary.fromValue(v = someValue))
+    assert(IsTrue === Ternary(v = true))
+    assert(IsTrue === Ternary(v = IsTrue))
+    assert(IsFalse === Ternary(v = false))
+    assert(IsFalse === Ternary(v = IsFalse))
+    assert(IsUnknown === Ternary(v = IsUnknown))
+    assert(IsUnknown === Ternary(v = null))
+    assert(IsUnknown === Ternary(v = someValue))
   }
 
   @Test
