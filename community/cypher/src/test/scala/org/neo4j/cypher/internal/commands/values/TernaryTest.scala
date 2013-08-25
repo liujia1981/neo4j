@@ -161,6 +161,48 @@ class TernaryTest extends Assertions {
   }
 
   @Test
+  def should_evaluate_forall() {
+    assert( IsTrue == Ternary.forall(Seq()) )
+    assert( IsTrue == Ternary.forall(Seq(IsTrue)) )
+    assert( IsUnknown == Ternary.forall(Seq(IsUnknown)) )
+    assert( IsUnknown == Ternary.forall(Seq(IsTrue, IsUnknown)) )
+    assert( IsFalse == Ternary.forall(Seq(IsFalse, IsUnknown)) )
+    assert( IsFalse == Ternary.forall(Seq(IsTrue, IsFalse)) )
+  }
+
+  @Test
+  def should_evaluate_exists() {
+    assert( IsFalse == Ternary.exists(Seq()) )
+    assert( IsTrue == Ternary.exists(Seq(IsTrue)) )
+    assert( IsUnknown == Ternary.exists(Seq(IsUnknown)) )
+    assert( IsTrue == Ternary.exists(Seq(IsTrue, IsUnknown)) )
+    assert( IsUnknown == Ternary.exists(Seq(IsFalse, IsUnknown)) )
+    assert( IsTrue == Ternary.exists(Seq(IsFalse, IsTrue)) )
+  }
+
+  @Test
+  def should_evaluate_none() {
+    assert( IsTrue == Ternary.none(Seq()) )
+    assert( IsFalse == Ternary.none(Seq(IsTrue)) )
+    assert( IsUnknown == Ternary.none(Seq(IsUnknown)) )
+    assert( IsFalse == Ternary.none(Seq(IsTrue, IsUnknown)) )
+    assert( IsUnknown == Ternary.none(Seq(IsFalse, IsUnknown)) )
+    assert( IsFalse == Ternary.none(Seq(IsFalse, IsTrue)) )
+  }
+
+  @Test
+  def should_evaluate_single() {
+    assert( IsFalse == Ternary.single(Seq()) )
+    assert( IsTrue == Ternary.single(Seq(IsTrue)) )
+    assert( IsUnknown == Ternary.single(Seq(IsUnknown)) )
+    assert( IsUnknown == Ternary.single(Seq(IsTrue, IsUnknown)) )
+    assert( IsUnknown == Ternary.single(Seq(IsFalse, IsUnknown)) )
+    assert( IsTrue == Ternary.single(Seq(IsFalse, IsTrue)) )
+    assert( IsFalse == Ternary.single(Seq(IsFalse, IsTrue, IsTrue)) )
+    assert( IsFalse == Ternary.single(Seq(IsFalse, IsTrue, IsTrue, IsUnknown)) )
+  }
+
+  @Test
   def should_print_nicely() {
     assert("true" === IsTrue.toString())
     assert("false" === IsFalse.toString())

@@ -31,17 +31,6 @@ sealed abstract class Ternary(val isKnown: Boolean, val isTrue: Boolean, val isF
   def unapply(value: Any): Option[Ternary] = if (apply(value)) Some(this) else None
 }
 
-object Ternary {
-  def apply(b: Boolean) = if (b) IsTrue else IsFalse
-  def apply(v: Any): Ternary = v match {
-    case b: Boolean => apply(b)
-    case v: Ternary => v
-    case _          => IsUnknown
-  }
-
-  val values = Set(IsTrue, IsFalse, IsUnknown)
-}
-
 object IsKnown {
   def unapply(v: Any) = Ternary(v).toKnownOption
 }
@@ -81,4 +70,72 @@ case object IsUnknown extends Ternary(isKnown = false, isTrue = false, isFalse =
   override def xor(other: Ternary): Ternary = IsUnknown
   override def apply(other: Any): Boolean = IsUnknown == other
   override def toString() = "unknown"
+}
+
+object Ternary {
+  def apply(b: Boolean) = if (b) IsTrue else IsFalse
+  def apply(v: Any): Ternary = v match {
+    case b: Boolean => apply(b)
+    case v: Ternary => v
+    case _          => IsUnknown
+  }
+
+  val values = Set(IsTrue, IsFalse, IsUnknown)
+
+  def forall(elements: Seq[Ternary]): Ternary = forall[Ternary](elements)(identity)
+
+  def forall[U](elements: Seq[U])(p: U => Ternary): Ternary = {
+      for (e <- elements) {
+        p(e) match {
+          case IsFalse   => return IsFalse
+          case IsUnknown => return IsUnknown
+          case IsTrue    =>
+        }
+      }
+      IsTrue
+  }
+
+  def exists(elements: Seq[Ternary]): Ternary = exists[Ternary](elements)(identity)
+
+  def exists[U](elements: Seq[U])(p: U => Ternary): Ternary = {
+    for (e <- elements) {
+      p(e) match {
+        case IsTrue    => return IsTrue
+        case IsUnknown => return IsUnknown
+        case IsFalse   =>
+      }
+    }
+    IsFalse
+  }
+
+  def none(elements: Seq[Ternary]): Ternary = none[Ternary](elements)(identity)
+
+  def none[U](elements: Seq[U])(p: U => Ternary): Ternary = {
+    for (e <- elements) {
+      p(e) match {
+        case IsTrue    => return IsFalse
+        case IsUnknown => return IsUnknown
+        case IsFalse   =>
+      }
+    }
+    IsTrue
+  }
+
+  def single(elements: Seq[Ternary]): Ternary = single[Ternary](elements)(identity)
+
+  def single[U](elements: Seq[U])(p: U => Ternary): Ternary = {
+    var foundTrue    = false
+    var foundUnknown = false
+
+    for (e <- elements) {
+      p(e) match {
+        case IsTrue if foundTrue => return IsFalse
+        case IsTrue              => foundTrue = true
+        case IsUnknown           => foundUnknown = true
+        case IsFalse             =>
+      }
+    }
+
+    if (foundUnknown) IsUnknown else Ternary(foundTrue)
+  }
 }

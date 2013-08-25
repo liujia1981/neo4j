@@ -62,7 +62,7 @@ class Property(val mapExpr: Expression,
 
   def apply(ctx: ExecutionContext)(implicit state: QueryState): Any = mapExpr(ctx) match {
     case null           => null
-    case IsUnknown   => null
+    case IsUnknown      => IsUnknown
     case IsMap(mapFunc) => try {
       mapFunc(state.query).apply(propertyKey.name)
     } catch {

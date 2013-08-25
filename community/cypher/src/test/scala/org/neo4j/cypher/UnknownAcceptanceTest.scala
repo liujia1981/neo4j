@@ -69,29 +69,30 @@ class UnknownAcceptanceTest extends ExecutionEngineHelper {
   }
 
   @Test
-  def should_compare_unknown_as_non_equal() {
+  def should_compare_same_unknown_as_unknown() {
     // given
     createLabeledNode("Person")
 
     // when
-    val result = parseAndExecute("START n=node(*) MATCH (n:Person)-[r?]->(m) RETURN m = m AS result" )
+    val result = parseAndExecute("START n=node(*) MATCH (n:Person)-[r?]->(m) RETURN str(m = m) AS result" )
 
     // then
-    val next: Boolean = result.columnAs[Boolean]("result").next()
-    assertFalse( "unknown should not be equal to itself", next )
+    // then
+    val next: String = result.columnAs[String]("result").next()
+    assert( "unknown" === next )
   }
 
   @Test
-  def should_compare_two_different_unknowns_as_non_equal() {
+  def should_compare_two_different_unknowns_as_unknown() {
     // given
     createLabeledNode("Person")
 
     // when
-    val result = parseAndExecute("START n=node(*) MATCH (n:Person)-[r?]->(m), (n)-[l?]->(k) RETURN m = k AS result" )
+    val result = parseAndExecute("START n=node(*) MATCH (n:Person)-[r?]->(m), (n)-[l?]->(k) RETURN str(m = k) AS result" )
 
     // then
-    val next: Boolean = result.columnAs[Boolean]("result").next()
-    assertFalse( "unknown values should not be equal", next )
+    val next: String = result.columnAs[String]("result").next()
+    assert( "unknown" === next )
   }
 
   @Test
