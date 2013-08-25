@@ -168,6 +168,7 @@ class TernaryTest extends Assertions {
     assert( IsUnknown == Ternary.forall(Seq(IsTrue, IsUnknown)) )
     assert( IsFalse == Ternary.forall(Seq(IsFalse, IsUnknown)) )
     assert( IsFalse == Ternary.forall(Seq(IsTrue, IsFalse)) )
+    assert( IsFalse == Ternary.forall(Seq(IsUnknown, IsFalse)) )
   }
 
   @Test

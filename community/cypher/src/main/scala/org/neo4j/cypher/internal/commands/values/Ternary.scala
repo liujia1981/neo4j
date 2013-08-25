@@ -70,10 +70,13 @@ case object IsUnknown extends Ternary(isKnown = false, isTrue = false, isFalse =
   override def xor(other: Ternary): Ternary = IsUnknown
   override def apply(other: Any): Boolean = IsUnknown == other
   override def toString() = "unknown"
+
+  def orNull(v: Any): Boolean = null == v || IsUnknown(v)
 }
 
 object Ternary {
   def apply(b: Boolean) = if (b) IsTrue else IsFalse
+
   def apply(v: Any): Ternary = v match {
     case b: Boolean => apply(b)
     case v: Ternary => v
@@ -85,14 +88,16 @@ object Ternary {
   def forall(elements: Seq[Ternary]): Ternary = forall[Ternary](elements)(identity)
 
   def forall[U](elements: Seq[U])(p: U => Ternary): Ternary = {
-      for (e <- elements) {
-        p(e) match {
-          case IsFalse   => return IsFalse
-          case IsUnknown => return IsUnknown
-          case IsTrue    =>
-        }
+    var foundUnknown = false
+
+    for (e <- elements) {
+      p(e) match {
+        case IsFalse   => return IsFalse
+        case IsUnknown => foundUnknown = true
+        case IsTrue    =>
       }
-      IsTrue
+    }
+    if (foundUnknown) IsUnknown else IsTrue
   }
 
   def exists(elements: Seq[Ternary]): Ternary = exists[Ternary](elements)(identity)

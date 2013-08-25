@@ -75,12 +75,7 @@ object Predicate {
 
 case class NullablePredicate(inner: Predicate, exp: Seq[(Expression, Boolean)]) extends TernaryPredicate {
   override def ternaryIsMatch(m: ExecutionContext)(implicit state: QueryState): Ternary =  {
-    val nullable = exp.find {
-      case (e, res) =>
-        val eVal = e(m)
-        eVal == null || IsUnknown(e(m))
-    }
-
+    val nullable = exp.find { case (e, res) => IsUnknown.orNull(e(m)) }
     nullable match {
       case Some((_, res)) => Ternary(res)
       case _              => inner.ternaryIsMatch(m)
