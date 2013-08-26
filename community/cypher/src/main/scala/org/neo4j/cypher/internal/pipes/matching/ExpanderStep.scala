@@ -48,7 +48,7 @@ trait ExpanderStep {
 
   def size: Option[Int]
 
-  def expand(node: Node, parameters: ExecutionContext, state:QueryState): (Iterable[Relationship], Option[ExpanderStep])
+  def expand(node: Node, sourceRel: Relationship, parameters: ExecutionContext, state: QueryState): (Iterable[Relationship], StepContext)
 
   def shouldInclude(): Boolean
 

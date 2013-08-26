@@ -39,12 +39,12 @@ case class SingleStep(id: Int,
   private val combinedPredicate: Predicate = And(relPredicate, nodePredicate)
   private val needToFilter = combinedPredicate != True()
 
-  def expand(node: Node, parameters: ExecutionContext, state: QueryState): (Iterable[Relationship], Option[ExpanderStep]) = {
+  def expand(node: Node, sourceRel: Relationship, parameters: ExecutionContext, state: QueryState): (Iterable[Relationship], StepContext) = {
     val rels = DynamicIterable {
       val allRelationships = state.query.getRelationshipsFor(node, direction, typ)
-      if (needToFilter) FilteringIterator( node, combinedPredicate, state, allRelationships ) else allRelationships
+      if (needToFilter) FilteringIterator( node, sourceRel, combinedPredicate, state, allRelationships ) else allRelationships
     }
-    (rels, next)
+    (rels, StepContext(next, parameters))
   }
 
   override def toString = {
@@ -95,7 +95,7 @@ case class SingleStep(id: Int,
 }
 
 object SingleStep {
-  final case class FilteringIterator(startNode: Node, predicate: Predicate, state: QueryState,
+  final case class FilteringIterator(startNode: Node, sourceRel: Relationship, predicate: Predicate, state: QueryState,
                                      inner: Iterator[Relationship]) extends Iterator[Relationship] {
     val miniMap: MiniMap = new MiniMap(null, startNode)
     var _next: Relationship = computeNext()

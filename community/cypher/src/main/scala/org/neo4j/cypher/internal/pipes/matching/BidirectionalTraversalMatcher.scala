@@ -35,13 +35,14 @@ class BidirectionalTraversalMatcher(steps: ExpanderStep,
 
   lazy val reversedSteps = steps.reverse()
 
-  val initialStartStep = new InitialStateFactory[Option[ExpanderStep]] {
-    def initialState(path: Path): Option[ExpanderStep] = Some(steps)
+  def initialStartStep(context: ExecutionContext) = new InitialStateFactory[StepContext] {
+    def initialState(path: Path): StepContext = StepContext(Some(steps), context.clone())
   }
 
-  val initialEndStep = new InitialStateFactory[Option[ExpanderStep]] {
-    def initialState(path: Path): Option[ExpanderStep] = Some(reversedSteps)
+  def initialEndStep(context: ExecutionContext) = new InitialStateFactory[StepContext] {
+    def initialState(path: Path): StepContext = StepContext(Some(reversedSteps), context.clone())
   }
+
   val baseTraversal: TraversalDescription = Traversal.traversal(Uniqueness.RELATIONSHIP_PATH)
   val collisionDetector = new StepCollisionDetector
 
@@ -51,8 +52,8 @@ class BidirectionalTraversalMatcher(steps: ExpanderStep,
     val e = end(context, state).toList
 
     def produceTraversalDescriptions() = {
-      val startWithoutCutoff = baseTraversal.expand(new TraversalPathExpander(context, state), initialStartStep)
-      val endWithoutCutOff = baseTraversal.expand(new TraversalPathExpander(context, state), initialEndStep)
+      val startWithoutCutoff = baseTraversal.expand(new TraversalPathExpander(state), initialStartStep(context))
+      val endWithoutCutOff = baseTraversal.expand(new TraversalPathExpander(state), initialEndStep(context))
 
       steps.size match {
         case None       => (startWithoutCutoff, endWithoutCutOff)

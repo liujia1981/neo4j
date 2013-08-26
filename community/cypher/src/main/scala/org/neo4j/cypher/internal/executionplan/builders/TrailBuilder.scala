@@ -43,11 +43,6 @@ final class TrailBuilder(patterns: Seq[Pattern], boundPoints: Seq[String], predi
   @tailrec
   private def internalFindLongestPath(doneSeq: Seq[(Trail, Seq[Pattern])]): Seq[(Trail, Seq[Pattern])] = {
 
-    def createFinder(elem: String): (Predicate => Boolean) = {
-      def containsSingle(set: Set[String]) = set.size == 1 && set.head == elem
-      (pred: Predicate) => containsSingle(pred.symbolTableDependencies)
-    }
-
     def transformToTrail(p: Pattern, done: Trail, patternsToDo: Seq[Pattern]): (Trail, Seq[Pattern]) = {
 
       def rewriteTo(originalName: String, newExpr: Expression)(e: Expression) = e match {
@@ -55,7 +50,9 @@ final class TrailBuilder(patterns: Seq[Pattern], boundPoints: Seq[String], predi
         case _                                        => e
       }
 
-      def findPredicates(k: String): Seq[Predicate] = predicates.filter(createFinder(k))
+      def findPredicates(k: String): Seq[Predicate] = predicates.filter {
+        (pred: Predicate) => pred.symbolTableDependencies.contains(k)
+      }
 
       def singleStep(rel: RelatedTo, end: String, dir: Direction) = {
         val orgRelPred: Seq[Predicate] = findPredicates(rel.relName)

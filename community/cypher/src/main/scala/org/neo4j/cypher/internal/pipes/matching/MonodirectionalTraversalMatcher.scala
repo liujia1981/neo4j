@@ -30,14 +30,14 @@ import org.neo4j.cypher.internal.pipes.EntityProducer
 class MonoDirectionalTraversalMatcher(steps: ExpanderStep, start: EntityProducer[Node])
   extends TraversalMatcher {
 
-  val initialStartStep = new InitialStateFactory[Option[ExpanderStep]] {
-    def initialState(path: Path): Option[ExpanderStep] = Some(steps)
+  def initialStartStep(context: ExecutionContext) = new InitialStateFactory[StepContext] {
+    def initialState(path: Path): StepContext = StepContext(Some(steps), context.clone())
   }
 
   def baseTraversal(params: ExecutionContext, state:QueryState): TraversalDescription = Traversal.
     traversal(Uniqueness.RELATIONSHIP_PATH).
     evaluator(new MyEvaluator).
-    expand(new TraversalPathExpander(params, state), initialStartStep)
+    expand(new TraversalPathExpander(state), initialStartStep(params))
 
 
   def findMatchingPaths(state: QueryState, context: ExecutionContext): Iterator[Path] = {

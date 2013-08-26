@@ -19,29 +19,6 @@
  */
 package org.neo4j.cypher.internal.pipes.matching
 
-import org.neo4j.graphdb.{Relationship, Path, PathExpander}
-import org.neo4j.graphdb.traversal.BranchState
-import java.lang.{Iterable => JIterable}
 import org.neo4j.cypher.internal.ExecutionContext
-import org.neo4j.cypher.internal.pipes.QueryState
-import org.neo4j.cypher.internal.helpers.DynamicJavaIterable
 
-class TraversalPathExpander(queryState: QueryState) extends PathExpander[StepContext] {
-  def expand(path: Path, branch: BranchState[StepContext]): JIterable[Relationship] = {
-
-    val state = branch.getState
-    val result: Iterable[Relationship] = state.step match {
-      case None => Seq()
-
-      case Some(step) =>
-        val (rels, next)  = step.expand(path.endNode(), path.lastRelationship(), state.m, queryState)
-        branch.setState(next)
-        rels
-    }
-
-    val javaResult = DynamicJavaIterable(result)
-    javaResult
-  }
-
-  def reverse(): PathExpander[StepContext] = this
-}
+case class StepContext(step: Option[ExpanderStep], m: ExecutionContext)

@@ -2840,6 +2840,20 @@ RETURN x0.name""")
     }
   }
 
+  @Test def shouldPushPredicatesIntoMatcher() {
+    val a = createNode("created" -> "Cypher")
+    val b = createNode()
+    val c = createNode("name" -> "Cypher")
+
+    relate(a, b, "KNOWS")
+    relate(b, c, "LIKES")
+
+    // when
+    val result = parseAndExecute(s"""START n=node(${nodeId(a)}) MATCH (n)-[:KNOWS]->()-[:LIKES]->(m) WHERE n.created=m.name RETURN n, m""")
+
+    assert( Set(Map("n" -> a, "m" -> c)) === result.toSet )
+  }
+
   @Test
   def allow_queries_with_only_return() {
     val result = parseAndExecute("RETURN 'Andres'").toList

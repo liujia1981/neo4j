@@ -48,7 +48,7 @@ case class VarLengthStep(id: Int,
   def createCopy(next: Option[ExpanderStep], direction: Direction, nodePredicate: Predicate): ExpanderStep =
     copy(next = next, direction = direction, nodePredicate = nodePredicate)
 
-  def expand(node: Node, parameters: ExecutionContext, state: QueryState): (Iterable[Relationship], Option[ExpanderStep]) = {
+  def expand(node: Node, sourceRel: Relationship, parameters: ExecutionContext, state: QueryState): (Iterable[Relationship], StepContext) = {
     def filter(r: Relationship, n: Node): Boolean = {
       val m = new MiniMap(r, n)
       relPredicate.isMatch(m)(state) && nodePredicate.isMatch(m)(state)
@@ -59,14 +59,14 @@ case class VarLengthStep(id: Int,
       case x => x - 1
     }
 
-    def forceNextStep() = next match {
-      case None       => (Seq(), None)
-      case Some(step) => step.expand(node, parameters, state)
+    def forceNextStep(): (Iterable[Relationship], StepContext) = next match {
+      case None       => (Seq(), StepContext(None, parameters))
+      case Some(step) => step.expand(node, sourceRel, parameters, state)
     }
 
     def expandRecursively(rels: Iterable[Relationship]): Iterable[Relationship] = {
       if (min == 0) {
-        rels ++ next.toSeq.map(s => s.expand(node, parameters, state)._1).flatten
+        rels ++ next.toSeq.map(s => s.expand(node, sourceRel, parameters, state)._1).flatten
       } else {
         rels
       }
@@ -84,7 +84,7 @@ case class VarLengthStep(id: Int,
     val matchingRelationships = DynamicIterable( state.query.getRelationshipsFor(node, direction, typ) )
 
 
-    val result = if (matchingRelationships.isEmpty && min == 0) {
+    if (matchingRelationships.isEmpty && min == 0) {
       /*
       If we didn't find any matching relationships, and min is zero, we'll strip away the current step, and keep
       the next step
@@ -94,9 +94,9 @@ case class VarLengthStep(id: Int,
       /*
       If min is not zero, we'll return whatever we found, decrease and return this step
       */
-      (expandRecursively(matchingRelationships), decreaseAndReturnNewNextStep())
+      val (iterable, resultStep) = (expandRecursively(matchingRelationships), decreaseAndReturnNewNextStep())
+      (iterable, StepContext(resultStep, parameters))
     }
-    result
   }
 
   def size: Option[Int] = next match {
