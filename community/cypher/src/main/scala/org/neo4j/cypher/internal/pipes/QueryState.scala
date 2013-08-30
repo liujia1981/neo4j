@@ -20,8 +20,7 @@
 package org.neo4j.cypher.internal.pipes
 
 import org.neo4j.graphdb.{Transaction, GraphDatabaseService}
-import org.neo4j.cypher.internal.spi.UpdateCountingQueryContext
-import org.neo4j.cypher.internal.spi.QueryContext
+import org.neo4j.cypher.internal.spi.{SlotAccess, UpdateCountingQueryContext, QueryContext}
 import org.neo4j.kernel.GraphDatabaseAPI
 import org.neo4j.cypher.ParameterNotFoundException
 
@@ -30,7 +29,8 @@ case class QueryState(db: GraphDatabaseService,
                       params: Map[String, Any],
                       decorator: PipeDecorator,
                       var transaction: Option[Transaction] = None,
-                      timeReader: TimeReader = new TimeReader) {
+                      timeReader: TimeReader = new TimeReader,
+                      slotAccess: SlotAccess = new SlotAccess) {
   def readTimeStamp(): Long = timeReader.getTime
 
 

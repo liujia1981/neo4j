@@ -24,6 +24,7 @@ import org.neo4j.cypher.internal.symbols._
 import org.neo4j.helpers.ThisShouldNotHappenError
 import org.neo4j.cypher.internal.ExecutionContext
 import org.neo4j.cypher.internal.pipes.QueryState
+import org.neo4j.cypher.internal.spi.Slot
 
 object Identifier {
   def isNamed(x: String) = !notNamed(x)
@@ -32,8 +33,16 @@ object Identifier {
 }
 
 case class Identifier(entityName: String) extends Expression with Typed {
-  def apply(ctx: ExecutionContext)(implicit state: QueryState): Any =
-    ctx.getOrElse(entityName, throw new NotFoundException("Unknown identifier `%s`.".format(entityName)))
+
+  // TODO make field of Identifier or have separate SlotIdentifier expression for this concern (?)
+  val entitySlot: Option[Slot] = None
+
+  def apply(ctx: ExecutionContext)(implicit state: QueryState): Any = entitySlot match {
+    case Some(slot) =>
+      state.slotAccess.getOption(slot)(ctx).getOrElse(throw new NotFoundException("Unknown identifier `%s`.".format(entityName)))
+    case _ =>
+      ctx.getOrElse(entityName, throw new NotFoundException("Unknown identifier `%s`.".format(entityName)))
+  }
 
   override def toString: String = entityName
 

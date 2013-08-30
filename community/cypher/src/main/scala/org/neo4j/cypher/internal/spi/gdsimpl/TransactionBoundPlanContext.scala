@@ -19,7 +19,7 @@
  */
 package org.neo4j.cypher.internal.spi.gdsimpl
 
-import org.neo4j.cypher.internal.spi.PlanContext
+import org.neo4j.cypher.internal.spi._
 import org.neo4j.cypher.MissingIndexException
 import org.neo4j.graphdb.GraphDatabaseService
 import org.neo4j.kernel.api.index.InternalIndexState
@@ -65,4 +65,14 @@ class TransactionBoundPlanContext(statement:ReadStatement, gdb:GraphDatabaseServ
       throw new MissingIndexException(idxName)
     }
   }
+
+  def createSlot(name: String): Slot = NameSlot(name)
+
+  def findSlot(name: String): Option[Slot] = Some(NameSlot(name))
+
+  def removeSlot(name: String) {
+    // don't do anything
+  }
+
+  override val slots: SlotTracker = new NameSlotTracker
 }
