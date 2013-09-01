@@ -22,43 +22,60 @@ package org.neo4j.cypher.internal.spi
 import scala.collection.mutable
 import org.neo4j.cypher.CypherException
 import org.neo4j.cypher.internal.ExecutionContext
+import org.neo4j.cypher.internal.commands.expressions.{SlotIdentifier, Identifier, Expression}
 
-sealed abstract class Slot
 
-abstract class SlotTracker extends (String => Option[Slot]) {
-
-  def all: Iterable[Slot]
-
-  def +=(name: String): Slot
-  def -=(name: String): Slot
-
-  def contains(name: String): Boolean
+sealed abstract class Slot extends PartialFunction[ExecutionContext, Any] {
+  def get(m: ExecutionContext): Option[Any]
+  def set(m: ExecutionContext, value: Any): Unit
+  def remove(m: ExecutionContext): Unit
 }
 
-class SlotAccess {
-  def put(slot: Slot)(m: ExecutionContext, value: Any) = m += nameSlot(slot).name -> value
-  def get(slot: Slot)(m: ExecutionContext): Any = m.apply(nameSlot(slot).name)
-  def getOption(slot: Slot)(m: ExecutionContext): Option[Any] = m.get(nameSlot(slot).name)
-  def remove(slot: Slot)(m: ExecutionContext): Any = m -= nameSlot(slot).name
+abstract class SlotTracker extends (String => Option[Slot]) {
+  def +=(name: String): Slot
+  def -=(name: String): Unit
+  def +?=(name: String): Slot
+  def get(name: String): Slot
 
-  private def nameSlot(slot: Slot) = slot.asInstanceOf[NameSlot]
+  def mapExpression(e: Expression): Expression = e match {
+    case i @ Identifier(entityName) if i.slot.isEmpty =>
+      apply(entityName) match {
+        case Some(slot) => SlotIdentifier(entityName, slot)
+        case None       => i
+      }
+    case _ =>
+      e
+  }
 
+  def names: Iterable[String]
+  def slots: Iterable[Slot]
+
+  def reset(): Unit
 }
 
 sealed abstract class SlotException(slotName: String, message: String) extends CypherException(message, null)
 
-class DuplicateSlotException(slotName: String, slot: Slot)
+class DuplicateSlotException(val slotName: String, val slot: Slot)
   extends SlotException(slotName, s"Slot for '$slotName' already exists")
 
-class SlotNotFoundException(slotName: String)
+class SlotNotFoundException(val slotName: String)
   extends SlotException(slotName, s"Slot for '$slotName' not found")
 
-final case class NameSlot(name: String) extends Slot
+final case class NameSlot(name: String) extends Slot {
+  def isDefinedAt(m: ExecutionContext): Boolean = m.contains(name)
+  def apply(m: ExecutionContext): Any = m(name)
+  def get(m: ExecutionContext): Option[Any] = m.get(name)
+  def set(m: ExecutionContext, value: Any): Unit = m += name -> value
+  def remove(m: ExecutionContext): Unit = m -= name
+}
 
 class NameSlotTracker extends SlotTracker {
   private val m: collection.mutable.Map[String, NameSlot] = new mutable.LinkedHashMap[String, NameSlot]
 
-  def all: Iterable[Slot] = m.values
+  def +?=(name: String): Slot = m.get(name) match {
+    case Some(slot) => slot
+    case None       => +=(name)
+  }
 
   def +=(name: String): Slot =
     if (m.contains(name)) {
@@ -69,17 +86,25 @@ class NameSlotTracker extends SlotTracker {
       slot
     }
 
-  def -=(name: String): Slot =
+  def -=(name: String): Unit =
     if (m.contains(name)) {
-      val slot = m(name)
       m -= name
-      slot
     } else {
       throw new SlotNotFoundException(name)
     }
 
-  def contains(name: String): Boolean = m.contains(name)
-
   def apply(name: String): Option[Slot] = m.get(name)
-}
 
+  def get(name: String): Slot = apply(name) match {
+    case Some(slot) => slot
+    case None       => throw new SlotNotFoundException(name)
+  }
+
+  def reset() {
+    m.clear()
+  }
+
+  def names: Iterable[String] = m.keys
+
+  def slots: Iterable[Slot] = m.values
+}

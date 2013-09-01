@@ -21,7 +21,7 @@ package org.neo4j.cypher.internal.executionplan.builders
 
 import org.junit.Assert._
 import org.neo4j.cypher.internal.executionplan.PartiallySolvedQuery
-import org.junit.Test
+import org.junit.{Before, Test}
 import org.neo4j.cypher.internal.commands._
 import expressions._
 import expressions.Literal
@@ -30,7 +30,7 @@ import org.neo4j.cypher.internal.pipes.NodeStartPipe
 import org.scalatest.mock.MockitoSugar
 import org.mockito.Matchers._
 import org.mockito.Mockito._
-import org.neo4j.cypher.internal.spi.PlanContext
+import org.neo4j.cypher.internal.spi.{NameSlotTracker, PlanContext}
 import org.neo4j.cypher.IndexHintException
 import org.neo4j.cypher.internal.commands.SchemaIndex
 import org.neo4j.cypher.internal.commands.AllNodes
@@ -42,7 +42,15 @@ import org.neo4j.cypher.internal.commands.values.TokenType.PropertyKey
 class StartPointBuilderTest extends BuilderTest with MockitoSugar {
 
   override val context = mock[PlanContext]
+  val tracker = new NameSlotTracker
+  when(context.slots).thenReturn(tracker)
+
   val builder = new StartPointBuilder()
+
+  @Before
+  def reset_tracker() {
+    tracker.reset()
+  }
 
   @Test
   def says_yes_to_node_by_id_queries() {
@@ -61,7 +69,7 @@ class StartPointBuilderTest extends BuilderTest with MockitoSugar {
 
     val remaining = assertAccepts(q).query
 
-    assertEquals("No more than 1 startitem should be solved", 1, remaining.start.filter(_.solved).length)
+    assertEquals("No more than 1 startitem should be solved", 1, remaining.start.count(_.solved))
     assertEquals("Stuff should remain", 1, remaining.start.filterNot(_.solved).length)
   }
 
@@ -156,7 +164,25 @@ class StartPointBuilderTest extends BuilderTest with MockitoSugar {
 
     val remaining = assertAccepts(q).query
 
-    assertEquals("No more than 1 startitem should be solved", 1, remaining.start.filter(_.solved).length)
+    assertEquals("No more than 1 start item should be solved", 1, remaining.start.count(_.solved))
     assertEquals("Stuff should remain", 1, remaining.start.filterNot(_.solved).length)
+  }
+
+  @Test
+  def rewrites_to_use_slot() {
+    // given
+    tracker += "n"
+    val q = PartiallySolvedQuery().
+      copy(start = Seq(Unsolved(NodeByIndexQuery("s", "index", Identifier("n")))))
+
+    // then
+    val epi = assertAccepts(q)
+
+    epi.query.start.map(_.token) match {
+      case Seq(NodeByIndexQuery("s", "index", SlotIdentifier("n", slot))) => // success
+      case _                                                              => fail("Expected rewritten expression")
+    }
+
+    assert( Set("n", "s") === tracker.names.toSet )
   }
 }

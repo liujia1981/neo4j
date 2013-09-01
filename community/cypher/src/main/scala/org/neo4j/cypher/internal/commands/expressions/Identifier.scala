@@ -34,15 +34,12 @@ object Identifier {
 
 case class Identifier(entityName: String) extends Expression with Typed {
 
-  // TODO make field of Identifier or have separate SlotIdentifier expression for this concern (?)
-  val entitySlot: Option[Slot] = None
+  def apply(ctx: ExecutionContext)(implicit state: QueryState): Any =
+    ctx.getOrElse(entityName, throw newNotFoundException)
 
-  def apply(ctx: ExecutionContext)(implicit state: QueryState): Any = entitySlot match {
-    case Some(slot) =>
-      state.slotAccess.getOption(slot)(ctx).getOrElse(throw new NotFoundException("Unknown identifier `%s`.".format(entityName)))
-    case _ =>
-      ctx.getOrElse(entityName, throw new NotFoundException("Unknown identifier `%s`.".format(entityName)))
-  }
+
+  protected def newNotFoundException: NotFoundException =
+    new NotFoundException("Unknown identifier `%s`.".format(entityName))
 
   override def toString: String = entityName
 
@@ -56,4 +53,20 @@ case class Identifier(entityName: String) extends Expression with Typed {
   override def evaluateType(expectedType: CypherType, symbols: SymbolTable) = symbols.evaluateType(entityName, expectedType)
 
   def symbolTableDependencies = Set(entityName)
+
+  def slot: Option[Slot] = None
+}
+
+object SlotIdentifier {
+  def apply(entityName: String, entitySlot: Slot) = new Identifier(entityName) {
+    override def apply(ctx: ExecutionContext)(implicit state: QueryState): Any =
+      entitySlot.get(ctx).getOrElse(throw newNotFoundException)
+
+    override def slot: Option[Slot] = Some(entitySlot)
+  }
+
+  def unapply(v: Any): Option[(String, Slot)] = v match {
+    case v: Identifier if v.slot.isDefined => Some((v.entityName, v.slot.get))
+    case _                                 => None
+  }
 }

@@ -20,7 +20,7 @@
 package org.neo4j.cypher.internal.pipes
 
 import org.neo4j.graphdb.{Transaction, GraphDatabaseService}
-import org.neo4j.cypher.internal.spi.{SlotAccess, UpdateCountingQueryContext, QueryContext}
+import org.neo4j.cypher.internal.spi.{UpdateCountingQueryContext, QueryContext}
 import org.neo4j.kernel.GraphDatabaseAPI
 import org.neo4j.cypher.ParameterNotFoundException
 
@@ -29,8 +29,7 @@ case class QueryState(db: GraphDatabaseService,
                       params: Map[String, Any],
                       decorator: PipeDecorator,
                       var transaction: Option[Transaction] = None,
-                      timeReader: TimeReader = new TimeReader,
-                      slotAccess: SlotAccess = new SlotAccess) {
+                      timeReader: TimeReader = new TimeReader) {
   def readTimeStamp(): Long = timeReader.getTime
 
 
@@ -38,10 +37,10 @@ case class QueryState(db: GraphDatabaseService,
   val query: QueryContext = updateTrackingQryCtx
 
 
-  def graphDatabaseAPI: GraphDatabaseAPI = if (db.isInstanceOf[GraphDatabaseAPI])
-    db.asInstanceOf[GraphDatabaseAPI]
-  else
-    throw new IllegalStateException("Graph database does not implement GraphDatabaseAPI")
+  def graphDatabaseAPI: GraphDatabaseAPI = db match {
+    case i: GraphDatabaseAPI => i
+    case _                   => throw new IllegalStateException("Graph database does not implement GraphDatabaseAPI")
+  }
 
   def getParam(key: String): Any =
     params.getOrElse(key, throw new ParameterNotFoundException("Expected a parameter named " + key))

@@ -34,38 +34,42 @@ class StartPointBuilder extends PlanBuilder {
     val p = plan.pipe
 
     val item = q.start.filter({ (startItemToken: QueryToken[StartItem]) =>
-        mapQueryToken().isDefinedAt((context, startItemToken))
+        mapQueryToken.isDefinedAt((context, startItemToken))
       }).head
 
+    val newItem = item.map(_.rewrite(context.slots.mapExpression))
+    val newPipe = mapQueryToken((context, newItem))(p)
 
-    val newPipe = mapQueryToken().apply((context, item))(p)
+    // TODO: revisit: ignoring duplicate slots here for now as that breaks union
+    context.slots +?= item.token.identifierName
 
-    plan.copy(pipe = newPipe, query = q.copy(start = q.start.filterNot(_ == item) :+ item.solve))
+
+    plan.copy(pipe = newPipe, query = q.copy(start = q.start.filterNot(_ == item) :+ newItem.solve))
   }
 
   override def missingDependencies(plan: ExecutionPlanInProgress): Seq[String] = super.missingDependencies(plan)
 
   def canWorkWith(plan: ExecutionPlanInProgress, context: PlanContext) =
     plan.query.start.exists({ (itemToken: QueryToken[StartItem]) =>
-      mapQueryToken().isDefinedAt((context, itemToken))
+      mapQueryToken.isDefinedAt((context, itemToken))
     })
 
   private def genNodeStart(entityFactory: EntityProducerFactory): PartialFunction[(PlanContext, StartItem), EntityProducer[Node]] =
     entityFactory.nodeByIndex orElse
-      entityFactory.nodeByIndexQuery orElse
-      entityFactory.nodeByIndexHint orElse
-      entityFactory.nodeById orElse
-      entityFactory.nodesAll orElse
-      entityFactory.nodeByLabel
+    entityFactory.nodeByIndexQuery orElse
+    entityFactory.nodeByIndexHint orElse
+    entityFactory.nodeById orElse
+    entityFactory.nodesAll orElse
+    entityFactory.nodeByLabel
 
 
   private def genRelationshipStart(entityFactory: EntityProducerFactory): PartialFunction[(PlanContext, StartItem), EntityProducer[Relationship]] =
     entityFactory.relationshipByIndex orElse
-      entityFactory.relationshipByIndexQuery orElse
-      entityFactory.relationshipById orElse
-      entityFactory.relationshipsAll
+    entityFactory.relationshipByIndexQuery orElse
+    entityFactory.relationshipById orElse
+    entityFactory.relationshipsAll
 
-  private def mapQueryToken(): PartialFunction[(PlanContext, QueryToken[StartItem]), (Pipe => Pipe)] = {
+  private val mapQueryToken: PartialFunction[(PlanContext, QueryToken[StartItem]), (Pipe => Pipe)] = {
     val entityFactory = new EntityProducerFactory
     val nodeStart = genNodeStart(entityFactory)
     val relationshipStart = genRelationshipStart(entityFactory)

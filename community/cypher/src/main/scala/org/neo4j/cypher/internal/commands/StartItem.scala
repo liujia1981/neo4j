@@ -32,64 +32,86 @@ import org.neo4j.cypher.internal.symbols.SymbolTable
 import org.neo4j.cypher.internal.pipes.QueryState
 import org.neo4j.cypher.internal.mutation.CreateRelationship
 
-abstract class StartItem(val identifierName: String, val args: Map[String, String])
+sealed abstract class StartItem(val identifierName: String, val args: Map[String, String])
   extends TypeSafe with AstNode[StartItem] {
   def mutating: Boolean
   def name: String = getClass.getSimpleName
 }
 
-trait ReadOnlyStartItem extends StartItem {
+sealed trait ReadOnlyStartItem extends StartItem {
   def mutating = false
 
   def children: Seq[AstNode[_]] = Nil
 
   def throwIfSymbolsMissing(symbols: SymbolTable) {}
   def symbolTableDependencies = Set.empty
+
   def rewrite(f: (Expression) => Expression) = this
 }
 
-case class RelationshipById(varName: String, expression: Expression)
-  extends StartItem(varName, Map.empty) with ReadOnlyStartItem
+final case class RelationshipById(varName: String, expression: Expression)
+  extends StartItem(varName, Map.empty) with ReadOnlyStartItem {
 
-case class RelationshipByIndex(varName: String, idxName: String, key: Expression, expression: Expression)
+  override def rewrite(f: Expression => Expression): RelationshipById = RelationshipById(varName, expression.rewrite(f))
+}
+
+final case class RelationshipByIndex(varName: String, idxName: String, key: Expression, expression: Expression)
   extends StartItem(varName, Map("idxName" -> idxName, "key" -> key.toString(), "expr" -> expression.toString()))
-  with ReadOnlyStartItem
+  with ReadOnlyStartItem {
+  override def rewrite(f: Expression => Expression): RelationshipByIndex =
+    RelationshipByIndex(varName, idxName, key.rewrite(f), expression.rewrite(f))
+}
 
-case class RelationshipByIndexQuery(varName: String, idxName: String, query: Expression)
+final case class RelationshipByIndexQuery(varName: String, idxName: String, query: Expression)
   extends StartItem(varName, Map("idxName" -> idxName, "query" -> query.toString()))
-  with ReadOnlyStartItem
+  with ReadOnlyStartItem {
+  override def rewrite(f: Expression => Expression): RelationshipByIndexQuery =
+    RelationshipByIndexQuery(varName, idxName, query.rewrite(f))
+}
 
-case class NodeByIndex(varName: String, idxName: String, key: Expression, expression: Expression)
+final case class NodeByIndex(varName: String, idxName: String, key: Expression, expression: Expression)
   extends StartItem(varName, Map("idxName" -> idxName, "key" -> key.toString(), "expr" -> expression.toString()))
-  with ReadOnlyStartItem
+  with ReadOnlyStartItem {
+  override def rewrite(f: Expression => Expression): NodeByIndex =
+    NodeByIndex(varName, idxName, key.rewrite(f), expression.rewrite(f))
+}
 
-case class NodeByIndexQuery(varName: String, idxName: String, query: Expression)
+final case class NodeByIndexQuery(varName: String, idxName: String, query: Expression)
   extends StartItem(varName, Map("idxName" -> idxName, "query" -> query.toString()))
-  with ReadOnlyStartItem
+  with ReadOnlyStartItem {
+  override def rewrite(f: Expression => Expression): NodeByIndexQuery =
+    NodeByIndexQuery(varName, idxName, query.rewrite(f))
+}
 
-trait Hint
+sealed trait Hint
 
-case class SchemaIndex(identifier: String, label: String, property: String, query: Option[Expression])
+final case class SchemaIndex(identifier: String, label: String, property: String, query: Option[Expression])
   extends StartItem(identifier, Map("label" -> label, "property" -> property) ++ query.map("query" -> _.toString()))
-  with ReadOnlyStartItem with Hint
+  with ReadOnlyStartItem with Hint {
+  override def rewrite(f: Expression => Expression): SchemaIndex =
+    SchemaIndex(identifier, label, property, query.map(_.rewrite(f)))
+}
 
-case class NodeById(varName: String, expression: Expression)
+final case class NodeById(varName: String, expression: Expression)
   extends StartItem(varName, Map("name" -> expression.toString()))
-  with ReadOnlyStartItem
+  with ReadOnlyStartItem {
+  override def rewrite(f: Expression => Expression): NodeById =
+    NodeById(varName, expression.rewrite(f))
+}
 
-case class NodeByIdOrEmpty(varName: String, id:Long)
+final case class NodeByIdOrEmpty(varName: String, id:Long)
   extends StartItem(varName, Map("name" -> id.toString))
   with ReadOnlyStartItem
 
-case class NodeByLabel(varName: String, label: String)
+final case class NodeByLabel(varName: String, label: String)
   extends StartItem(varName, Map("label" -> label.toString)) with ReadOnlyStartItem with Hint
 
-case class AllNodes(columnName: String) extends StartItem(columnName, Map.empty) with ReadOnlyStartItem
+final case class AllNodes(columnName: String) extends StartItem(columnName, Map.empty) with ReadOnlyStartItem
 
-case class AllRelationships(columnName: String) extends StartItem(columnName, Map.empty) with ReadOnlyStartItem
+final case class AllRelationships(columnName: String) extends StartItem(columnName, Map.empty) with ReadOnlyStartItem
 
 //We need to wrap the inner classes to be able to have two different rewrite methods
-abstract class UpdatingStartItem(val updateAction: UpdateAction, name: String) extends StartItem(name, Map.empty) {
+sealed abstract class UpdatingStartItem(val updateAction: UpdateAction, name: String) extends StartItem(name, Map.empty) {
 
   override def mutating = true
   override def children = Seq(updateAction)
@@ -99,19 +121,19 @@ abstract class UpdatingStartItem(val updateAction: UpdateAction, name: String) e
   override def symbolTableDependencies = updateAction.symbolTableDependencies
 }
 
-case class CreateNodeStartItem(inner: CreateNode) extends UpdatingStartItem(inner, inner.key) {
+final case class CreateNodeStartItem(inner: CreateNode) extends UpdatingStartItem(inner, inner.key) {
   override def rewrite(f: (Expression) => Expression) = CreateNodeStartItem(inner.rewrite(f))
 }
 
-case class CreateRelationshipStartItem(inner: CreateRelationship) extends UpdatingStartItem(inner, inner.key) {
+final case class CreateRelationshipStartItem(inner: CreateRelationship) extends UpdatingStartItem(inner, inner.key) {
   override def rewrite(f: (Expression) => Expression) = CreateRelationshipStartItem(inner.rewrite(f))
 }
 
-case class CreateUniqueStartItem(inner: CreateUniqueAction) extends UpdatingStartItem(inner, "oh noes") {
+final case class CreateUniqueStartItem(inner: CreateUniqueAction) extends UpdatingStartItem(inner, "oh noes") {
   override def rewrite(f: (Expression) => Expression) = CreateUniqueStartItem(inner.rewrite(f))
 }
 
-case class MergeNodeStartItem(inner: MergeNodeAction) extends UpdatingStartItem(inner, inner.identifier) {
+final case class MergeNodeStartItem(inner: MergeNodeAction) extends UpdatingStartItem(inner, inner.identifier) {
   override def rewrite(f: (Expression) => Expression) = MergeNodeStartItem(inner.rewrite(f))
 }
 
