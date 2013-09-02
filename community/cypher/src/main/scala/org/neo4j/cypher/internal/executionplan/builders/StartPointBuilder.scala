@@ -37,14 +37,15 @@ class StartPointBuilder extends PlanBuilder {
         mapQueryToken.isDefinedAt((context, startItemToken))
       }).head
 
-    val newItem = item.map(_.rewrite(context.slots.mapExpression))
-    val newPipe = mapQueryToken((context, newItem))(p)
-
     // TODO: revisit: ignoring duplicate slots here for now as that breaks union
     context.slots +?= item.token.identifierName
 
+    val newQuery = q.copy( start = q.start.filterNot(_ == item) :+ item.solve )
+    val rewrittenQuery = newQuery.rewrite(context.slots.mapExpression)
 
-    plan.copy(pipe = newPipe, query = q.copy(start = q.start.filterNot(_ == item) :+ newItem.solve))
+    val newPipe = mapQueryToken((context, item))(p)
+
+    plan.copy(pipe = newPipe, query = rewrittenQuery)
   }
 
   override def missingDependencies(plan: ExecutionPlanInProgress): Seq[String] = super.missingDependencies(plan)

@@ -43,32 +43,19 @@ class SlotTrackerTest extends Assertions {
     val tracker = createTracker
 
     // when
-    try {
-      tracker.get("slot")
-      fail("Expected SlotNotFoundException")
-    } catch {
-      // then
-      case e : SlotNotFoundException =>
-        assert( "slot" === e.slotName )
-    }
+    val e = intercept[SlotNotFoundException](tracker.get("slot"))
+    assert( "slot" === e.slotName )
   }
 
   @Test
   def should_not_register_slots_twice() {
     // given
     val tracker = createTracker
-    val slot = tracker += "slot"
+    tracker += "slot"
 
     // when
-    try {
-      tracker += "slot"
-      fail("Expected DuplicateSlotException")
-    } catch {
-      // then
-      case e : DuplicateSlotException =>
-        assert( "slot" === e.slotName )
-        assert( slot === e.slot )
-    }
+    val e = intercept[DuplicateSlotException](tracker += "slot")
+    assert( "slot" === e.slotName )
   }
 
   @Test
@@ -90,15 +77,8 @@ class SlotTrackerTest extends Assertions {
     val tracker = createTracker
 
     // when
-    try {
-      tracker -= "slot"
-      fail("Expected SlotNotFoundException")
-    }
-    catch {
-      // then
-      case e: SlotNotFoundException =>
-        assert( "slot" === e.slotName )
-    }
+    val e = intercept[SlotNotFoundException](tracker -= "slot")
+    assert( "slot" === e.slotName )
   }
 
   @Test
