@@ -32,11 +32,18 @@ object Identifier {
   def notNamed(x: String) = x.startsWith("  UNNAMED")
 }
 
-case class Identifier(entityName: String) extends Expression with Typed {
+object NamedIdentifier {
+  def unapply(x: Any): Option[String] = x match {
+    case x: AbstractIdentifier => Some(x.entityName)
+    case _                     => None
+  }
+}
 
-  def apply(ctx: ExecutionContext)(implicit state: QueryState): Any =
-    ctx.getOrElse(entityName, throw newNotFoundException)
+sealed abstract class AbstractIdentifier extends Expression with Typed {
 
+  def entityName: String
+
+  def slot: Option[Slot]
 
   protected def newNotFoundException: NotFoundException =
     new NotFoundException("Unknown identifier `%s`.".format(entityName))
@@ -54,19 +61,20 @@ case class Identifier(entityName: String) extends Expression with Typed {
 
   def symbolTableDependencies = Set(entityName)
 
+}
+
+final case class Identifier(entityName: String) extends AbstractIdentifier {
+
+  def apply(ctx: ExecutionContext)(implicit state: QueryState): Any =
+    ctx.getOrElse(entityName, throw newNotFoundException)
+
   def slot: Option[Slot] = None
 }
 
-object SlotIdentifier {
-  def apply(entityName: String, entitySlot: Slot) = new Identifier(entityName) {
-    override def apply(ctx: ExecutionContext)(implicit state: QueryState): Any =
-      entitySlot.get(ctx).getOrElse(throw newNotFoundException)
+final case class SlotIdentifier(override val entityName: String, entitySlot: Slot) extends AbstractIdentifier {
 
-    override def slot: Option[Slot] = Some(entitySlot)
-  }
+  def apply(ctx: ExecutionContext)(implicit state: QueryState): Any =
+    entitySlot.get(ctx).getOrElse(throw newNotFoundException)
 
-  def unapply(v: Any): Option[(String, Slot)] = v match {
-    case v: Identifier if v.slot.isDefined => Some((v.entityName, v.slot.get))
-    case _                                 => None
-  }
+  def slot: Option[Slot] = Some(entitySlot)
 }

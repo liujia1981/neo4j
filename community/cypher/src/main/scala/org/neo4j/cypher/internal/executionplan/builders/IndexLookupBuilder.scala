@@ -22,7 +22,7 @@ package org.neo4j.cypher.internal.executionplan.builders
 import org.neo4j.cypher.internal.executionplan.{PartiallySolvedQuery, PlanBuilder}
 import org.neo4j.cypher.internal.spi.PlanContext
 import org.neo4j.cypher.internal.commands._
-import org.neo4j.cypher.internal.commands.expressions.{Expression, Identifier, Property}
+import org.neo4j.cypher.internal.commands.expressions.{NamedIdentifier, Expression, Property}
 import org.neo4j.cypher.IndexHintException
 import org.neo4j.cypher.internal.commands.SchemaIndex
 import org.neo4j.cypher.internal.executionplan.ExecutionPlanInProgress
@@ -51,25 +51,25 @@ class IndexLookupBuilder extends PlanBuilder {
 
 
     val newQuery = q.copy(
-      where = q.where.filterNot(x => x == predicate || labelPredicates.contains(x)) ++ labelPredicates.map(_.solve(ctx.slots)) :+ predicate.solve(ctx.slots),
+      where = q.where.filterNot(x => x == predicate || labelPredicates.contains(x)) ++ labelPredicates.map(_.solve.tracked(ctx)) :+ predicate.solve.tracked(ctx),
       start = q.start.filterNot(_ == querylessHint) :+ queryfullHint
     )
 
-    plan.copy(query = ctx.slots.rewrite(newQuery))
+    plan.copy(query = newQuery.tracked(ctx.slots))
   }
 
   def findLabelPredicates(plan: ExecutionPlanInProgress, hint: SchemaIndex): Seq[Unsolved[Predicate]] =
     plan.query.where.collect {
-      case predicate@Unsolved(HasLabel(Identifier(identifier), label))
+      case predicate@Unsolved(HasLabel(NamedIdentifier(identifier), label))
         if identifier == hint.identifier && label.name == hint.label => predicate
     }
 
   private def findPropertyPredicates(plan: ExecutionPlanInProgress, hint: SchemaIndex): Seq[(Unsolved[Predicate], Expression)] =
     plan.query.where.collect {
-      case predicate@Unsolved(Equals(Property(Identifier(id), prop), expression))
+      case predicate@Unsolved(Equals(Property(NamedIdentifier(id), prop), expression))
         if id == hint.identifier && prop.name == hint.property => (predicate, expression)
 
-      case predicate@Unsolved(Equals(expression, Property(Identifier(id), prop)))
+      case predicate@Unsolved(Equals(expression, Property(NamedIdentifier(id), prop)))
         if id == hint.identifier && prop.name == hint.property => (predicate, expression)
     }
 

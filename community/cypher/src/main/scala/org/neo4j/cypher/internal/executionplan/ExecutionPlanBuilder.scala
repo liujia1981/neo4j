@@ -196,7 +196,7 @@ The Neo4j Team""")
 
   def prepare = new Phase {
     def myBuilders: Seq[PlanBuilder] = Seq(
-      new IndexLookupBuilder,
+      /* explicit slots */ new IndexLookupBuilder,
       new StartPointChoosingBuilder
     )
   }

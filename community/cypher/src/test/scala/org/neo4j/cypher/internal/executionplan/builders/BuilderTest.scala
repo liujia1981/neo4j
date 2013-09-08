@@ -21,13 +21,14 @@ package org.neo4j.cypher.internal.executionplan.builders
 
 import org.scalatest.Assertions
 import org.neo4j.cypher.internal.symbols.{RelationshipType, NodeType}
-import org.neo4j.cypher.internal.executionplan.{PlanBuilder, ExecutionPlanInProgress, PartiallySolvedQuery}
+import org.neo4j.cypher.internal.executionplan.{PlanBuilder, PartiallySolvedQuery}
 import org.neo4j.cypher.internal.pipes.{MutableMaps, Pipe, NullPipe, FakePipe}
 import org.junit.Assert._
 import org.neo4j.cypher.internal.spi.{NameSlotTracker, PlanContext}
 import org.mockito.Mockito._
 import org.neo4j.cypher.internal.executionplan.ExecutionPlanInProgress
 import org.scalatest.mock.MockitoSugar
+import org.neo4j.cypher.internal.commands.AstNode
 
 trait BuilderTest extends Assertions {
   def createPipe(nodes: Seq[String] = Seq(), relationships: Seq[String] = Seq()): FakePipe = {
@@ -69,7 +70,14 @@ trait BuilderTest extends Assertions {
 
 trait SlotBuilderTest extends BuilderTest with MockitoSugar {
 
-  override val context = mock[PlanContext]
+  override implicit val context = mock[PlanContext]
+
   val tracker = new NameSlotTracker
   when(context.slots).thenReturn(tracker)
+
+  def trackedSet[T <: AstNode[_]](tokens: QueryToken[T]*): Set[QueryToken[T]] =
+    tokens.map(_.tracked(context)).toSet
+
+  def trackedSeq[T <: AstNode[_]](tokens: QueryToken[T]*): Seq[QueryToken[T]] =
+    tokens.map(_.tracked(context)).toSeq
 }

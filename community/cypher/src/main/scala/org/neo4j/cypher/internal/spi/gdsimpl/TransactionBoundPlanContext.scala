@@ -66,13 +66,5 @@ class TransactionBoundPlanContext(statement:ReadStatement, gdb:GraphDatabaseServ
     }
   }
 
-  def createSlot(name: String): Slot = NameSlot(name)
-
-  def findSlot(name: String): Option[Slot] = Some(NameSlot(name))
-
-  def removeSlot(name: String) {
-    // don't do anything
-  }
-
   override val slots: SlotTracker = new NameSlotTracker
 }

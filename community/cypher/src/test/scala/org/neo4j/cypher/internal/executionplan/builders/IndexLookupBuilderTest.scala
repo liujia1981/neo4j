@@ -22,12 +22,15 @@ package org.neo4j.cypher.internal.executionplan.builders
 import org.junit.Test
 import org.neo4j.cypher.internal.executionplan.PartiallySolvedQuery
 import org.neo4j.cypher.internal.commands._
-import org.neo4j.cypher.internal.commands.expressions.{SlotIdentifier, Identifier, Literal, Property}
+import org.neo4j.cypher.internal.commands.expressions._
 import org.neo4j.cypher.IndexHintException
 import org.neo4j.cypher.internal.commands.values.{KeyToken, TokenType}
 import org.neo4j.cypher.internal.commands.values.TokenType._
+import org.neo4j.cypher.internal.commands.Not
 import org.neo4j.cypher.internal.commands.SchemaIndex
+import org.neo4j.cypher.internal.commands.expressions.Literal
 import org.neo4j.cypher.internal.commands.Equals
+import org.neo4j.cypher.internal.commands.IsNull
 import scala.Some
 import org.neo4j.cypher.internal.commands.HasLabel
 
@@ -106,7 +109,7 @@ class IndexLookupBuilderTest extends SlotBuilderTest {
     //THEN
     assert(plan.query.start === Seq(Unsolved(SchemaIndex(identifier, label1, property, Some(valueExpression)))))
     val a = plan.query.where.toSet
-    val b = Set(Solved(label1Predicate), Unsolved(label2Predicate), Solved(propertyPredicate))
+    val b = trackedSet[Predicate](Solved(label1Predicate), Unsolved(label2Predicate), Solved(propertyPredicate))
     assert(a === b)
   }
 
@@ -129,11 +132,10 @@ class IndexLookupBuilderTest extends SlotBuilderTest {
     val plan = assertAccepts(q)
     val where = plan.query.where
 
-    // TODO: This should fail!
-    assert( Set(
+    assert( trackedSet[Predicate](
       Unsolved(notIsNull),
-      Solved(tracker.rewrite(predicate)),
-      Solved(tracker.rewrite(labelPredicate))
+      Solved(predicate),
+      Solved(labelPredicate)
     ) === where.toSet)
   }
 
@@ -149,7 +151,7 @@ class IndexLookupBuilderTest extends SlotBuilderTest {
     val plan = assertAccepts(q)
 
     //THEN
-    assert(plan.query.start === Seq(Unsolved(SchemaIndex(identifier, label, property, Some(valueExpression)))))
-    assert(plan.query.where.toSet === Set(Solved(predicate), Solved(labelPredicate)))
+    assert(plan.query.start === trackedSeq[StartItem](Unsolved(SchemaIndex(identifier, label, property, Some(valueExpression)))))
+    assert(plan.query.where.toSet === trackedSet[Predicate](Solved(predicate), Solved(labelPredicate)))
   }
 }

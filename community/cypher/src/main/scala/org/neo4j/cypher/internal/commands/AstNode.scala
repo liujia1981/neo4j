@@ -21,12 +21,16 @@ package org.neo4j.cypher.internal.commands
 
 import expressions.Expression
 import org.neo4j.cypher.CypherTypeException
+import org.neo4j.cypher.internal.spi.SlotTracker
 
 
 trait AstNode[T] {
   def children: Seq[AstNode[_]]
 
   def rewrite(f: Expression => Expression): T
+
+  def tracked(implicit tracker: SlotTracker): T = rewrite(tracker.mapExpression)
+//  def tracked(implicit tracker: SlotTracker): T = rewrite(identity)
 
   def typedRewrite[R <: T](f: Expression => Expression)(implicit mf: Manifest[R]): R = rewrite(f) match {
     case (value: R) => value

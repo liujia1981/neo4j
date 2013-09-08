@@ -45,11 +45,11 @@ class EntityProducerFactory extends GraphElementPropertyFunctions {
 
   def nodeStartItems: PartialFunction[(PlanContext, StartItem), EntityProducer[Node]] =
     nodeById orElse
-      nodeByIndex orElse
-      nodeByIndexQuery orElse
-      nodeByIndexHint orElse
-      nodeByLabel orElse
-      nodesAll
+    nodeByIndex orElse
+    nodeByIndexQuery orElse
+    nodeByIndexHint orElse
+    nodeByLabel orElse
+    nodesAll
 
   val nodeByIndex: PartialFunction[(PlanContext, StartItem), EntityProducer[Node]] = {
     case (planContext, startItem @ NodeByIndex(varName, idxName, key, value)) =>

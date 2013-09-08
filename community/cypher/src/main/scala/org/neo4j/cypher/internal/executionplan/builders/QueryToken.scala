@@ -19,8 +19,8 @@
  */
 package org.neo4j.cypher.internal.executionplan.builders
 
-import org.neo4j.cypher.internal.spi.SlotTracker
-import org.neo4j.cypher.internal.commands.expressions.Expression
+import org.neo4j.cypher.internal.spi.PlanContext
+import org.neo4j.cypher.internal.commands.AstNode
 
 abstract sealed class QueryToken[T](val token: T) {
   def solved: Boolean
@@ -29,10 +29,10 @@ abstract sealed class QueryToken[T](val token: T) {
 
   def solve: QueryToken[T] = Solved(token)
 
-  def solve(tracker: SlotTracker)(implicit ev: <:<[T, Expression]): QueryToken[T] =
-    Solved(tracker.rewrite(ev(token)).asInstanceOf[T])
-
   def map[B](f : T => B):QueryToken[B] = if (solved) Solved(f(token)) else Unsolved(f(token))
+
+  def tracked[S >: T <: AstNode[_]](ctx: PlanContext)(implicit ev: <:<[T, S]): QueryToken[S] =
+    map(ev(_).tracked(ctx.slots).asInstanceOf[S])
 }
 
 case class Solved[T](t: T) extends QueryToken[T](t) {

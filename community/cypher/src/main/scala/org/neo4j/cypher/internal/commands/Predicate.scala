@@ -27,6 +27,7 @@ import org.neo4j.cypher.internal.helpers.{CastSupport, IsCollection, CollectionS
 import org.neo4j.cypher.internal.ExecutionContext
 import org.neo4j.cypher.internal.pipes.QueryState
 import org.neo4j.cypher.internal.commands.values.KeyToken
+import org.neo4j.cypher.internal.spi.SlotTracker
 
 abstract class Predicate extends Expression {
   def apply(ctx: ExecutionContext)(implicit state: QueryState) = isMatch(ctx)
@@ -49,6 +50,7 @@ abstract class Predicate extends Expression {
     case _ => preds.fold(this)(_ ++ _)
   } }
 
+  override def tracked(implicit tracker: SlotTracker): Predicate = rewrite(tracker.mapExpression)
 }
 
 object Predicate {

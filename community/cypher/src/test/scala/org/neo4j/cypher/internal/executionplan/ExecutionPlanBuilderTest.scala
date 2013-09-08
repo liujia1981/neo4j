@@ -64,7 +64,7 @@ class ExecutionPlanBuilderTest extends GraphDatabaseTestBase with Assertions wit
 
     // when
     intercept[ExplodingException] {
-      val executionPlan = execPlanBuilder.build(planContext, q)
+      val executionPlan = execPlanBuilder.build(createPlanContext, q)
       executionPlan.execute(queryContext, Map())
     }
 
@@ -90,9 +90,11 @@ class ExecutionPlanBuilderTest extends GraphDatabaseTestBase with Assertions wit
     val pkId = queryContext.getPropertyKeyId("foo")
 
     // when
-    val commands = execPlanBuilder.buildPipes(planContext, q)._1.asInstanceOf[ExecuteUpdateCommandsPipe].commands
+    val ctx = createPlanContext
+    val commands = execPlanBuilder.buildPipes(ctx, q)._1.asInstanceOf[ExecuteUpdateCommandsPipe].commands
+    val trackedIdentifier = identifier.tracked(ctx.slots)
 
-    assertTrue("Property was not resolved", commands == Seq(DeletePropertyAction(identifier, PropertyKey("foo", pkId))))
+    assertTrue( "Property key was not resolved", List(DeletePropertyAction(trackedIdentifier, PropertyKey("foo", pkId))) == commands.toList )
   }
 
   @Test def should_resolve_label_ids() {
@@ -111,9 +113,10 @@ class ExecutionPlanBuilderTest extends GraphDatabaseTestBase with Assertions wit
     val labelId = queryContext.getLabelId("Person")
 
     // when
-    val predicate = execPlanBuilder.buildPipes(planContext, q)._1.asInstanceOf[FilterPipe].predicate
+    val ctx = createPlanContext
+    val predicate = execPlanBuilder.buildPipes(ctx, q)._1.asInstanceOf[FilterPipe].predicate
 
-    assertTrue("Label was not resolved", predicate == HasLabel(Identifier("x"), Label("Person", labelId)))
+    assertTrue("Label was not resolved", HasLabel(Identifier("x").tracked(ctx.slots), Label("Person", labelId)) == predicate )
   }
 }
 
