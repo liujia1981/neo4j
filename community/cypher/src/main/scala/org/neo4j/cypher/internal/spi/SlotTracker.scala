@@ -23,6 +23,7 @@ import scala.collection.mutable
 import org.neo4j.cypher.CypherException
 import org.neo4j.cypher.internal.ExecutionContext
 import org.neo4j.cypher.internal.commands.expressions.{SlotIdentifier, Identifier, Expression}
+import org.neo4j.cypher.internal.commands.AstNode
 
 
 sealed abstract class Slot extends PartialFunction[ExecutionContext, Any] {
@@ -46,6 +47,8 @@ abstract class SlotTracker extends (String => Option[Slot]) {
     case _ =>
       e
   }
+
+  def rewrite[T](astNode: AstNode[T]): T = astNode.rewrite(mapExpression)
 
   def names: Iterable[String]
   def slots: Iterable[Slot]

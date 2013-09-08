@@ -22,18 +22,16 @@ package org.neo4j.cypher.internal.executionplan.builders
 import org.junit.Test
 import org.neo4j.cypher.internal.executionplan.PartiallySolvedQuery
 import org.neo4j.cypher.internal.commands._
-import org.neo4j.cypher.internal.commands.expressions.Identifier
+import org.neo4j.cypher.internal.commands.expressions.{SlotIdentifier, Identifier, Literal, Property}
 import org.neo4j.cypher.IndexHintException
 import org.neo4j.cypher.internal.commands.values.{KeyToken, TokenType}
 import org.neo4j.cypher.internal.commands.values.TokenType._
 import org.neo4j.cypher.internal.commands.SchemaIndex
-import org.neo4j.cypher.internal.commands.expressions.Literal
 import org.neo4j.cypher.internal.commands.Equals
 import scala.Some
 import org.neo4j.cypher.internal.commands.HasLabel
-import org.neo4j.cypher.internal.commands.expressions.Property
 
-class IndexLookupBuilderTest extends BuilderTest {
+class IndexLookupBuilderTest extends SlotBuilderTest {
 
   def builder = new IndexLookupBuilder()
 
@@ -110,6 +108,33 @@ class IndexLookupBuilderTest extends BuilderTest {
     val a = plan.query.where.toSet
     val b = Set(Solved(label1Predicate), Unsolved(label2Predicate), Solved(propertyPredicate))
     assert(a === b)
+  }
+
+  @Test
+  def rewrites_to_use_slot() {
+    //GIVEN
+    val identifier = "id"
+    val label = "label"
+    val property = "prop"
+    val valueExpression = Literal(42)
+    val predicate = Equals(Property(Identifier(identifier), PropertyKey(property)), valueExpression)
+    val labelPredicate = HasLabel(Identifier(identifier), KeyToken.Unresolved(label, TokenType.Label))
+    val notIsNull: Not = Not(IsNull(Identifier(identifier)))
+    val q: PartiallySolvedQuery = PartiallySolvedQuery().copy(
+      start = Seq(Unsolved(SchemaIndex(identifier, label, property, None))),
+      where = Seq(Unsolved(predicate), Unsolved(labelPredicate), Unsolved(notIsNull))
+    )
+
+    //WHEN
+    val plan = assertAccepts(q)
+    val where = plan.query.where
+
+    // TODO: This should fail!
+    assert( Set(
+      Unsolved(notIsNull),
+      Solved(tracker.rewrite(predicate)),
+      Solved(tracker.rewrite(labelPredicate))
+    ) === where.toSet)
   }
 
   private def test(identifier: String, label: String, property: String, predicate: Equals, valueExpression: Literal) {

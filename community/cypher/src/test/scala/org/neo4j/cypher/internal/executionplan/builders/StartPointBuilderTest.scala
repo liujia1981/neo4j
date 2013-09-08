@@ -39,11 +39,7 @@ import org.neo4j.cypher.internal.commands.NodeByIndexQuery
 import org.neo4j.kernel.impl.api.index.IndexDescriptor
 import org.neo4j.cypher.internal.commands.values.TokenType.PropertyKey
 
-class StartPointBuilderTest extends BuilderTest with MockitoSugar {
-
-  override val context = mock[PlanContext]
-  val tracker = new NameSlotTracker
-  when(context.slots).thenReturn(tracker)
+class StartPointBuilderTest extends SlotBuilderTest {
 
   val builder = new StartPointBuilder()
 

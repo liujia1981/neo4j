@@ -203,7 +203,7 @@ The Neo4j Team""")
 
   def matching = new Phase {
     def myBuilders: Seq[PlanBuilder] = Seq(
-      new StartPointBuilder,
+      /* explicit slots */ new StartPointBuilder,
       new MatchBuilder,
       new TraversalMatcherBuilder,
       new ShortestPathBuilder,

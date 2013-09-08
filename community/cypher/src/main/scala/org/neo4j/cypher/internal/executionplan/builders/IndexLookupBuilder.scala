@@ -46,13 +46,16 @@ class IndexLookupBuilder extends PlanBuilder {
 
     val q: PartiallySolvedQuery = plan.query
 
+    ctx.slots += hint.identifierName
     val queryfullHint: Unsolved[StartItem] = Unsolved(hint.copy(query = Some(expression)))
+
+
     val newQuery = q.copy(
-      where = q.where.filterNot(x => x == predicate || labelPredicates.contains(x)) ++ labelPredicates.map(_.solve) :+ predicate.solve,
+      where = q.where.filterNot(x => x == predicate || labelPredicates.contains(x)) ++ labelPredicates.map(_.solve(ctx.slots)) :+ predicate.solve(ctx.slots),
       start = q.start.filterNot(_ == querylessHint) :+ queryfullHint
     )
 
-    plan.copy(query = newQuery)
+    plan.copy(query = ctx.slots.rewrite(newQuery))
   }
 
   def findLabelPredicates(plan: ExecutionPlanInProgress, hint: SchemaIndex): Seq[Unsolved[Predicate]] =

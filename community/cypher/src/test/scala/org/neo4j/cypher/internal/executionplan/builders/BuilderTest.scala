@@ -24,7 +24,10 @@ import org.neo4j.cypher.internal.symbols.{RelationshipType, NodeType}
 import org.neo4j.cypher.internal.executionplan.{PlanBuilder, ExecutionPlanInProgress, PartiallySolvedQuery}
 import org.neo4j.cypher.internal.pipes.{MutableMaps, Pipe, NullPipe, FakePipe}
 import org.junit.Assert._
-import org.neo4j.cypher.internal.spi.PlanContext
+import org.neo4j.cypher.internal.spi.{NameSlotTracker, PlanContext}
+import org.mockito.Mockito._
+import org.neo4j.cypher.internal.executionplan.ExecutionPlanInProgress
+import org.scalatest.mock.MockitoSugar
 
 trait BuilderTest extends Assertions {
   def createPipe(nodes: Seq[String] = Seq(), relationships: Seq[String] = Seq()): FakePipe = {
@@ -62,4 +65,11 @@ trait BuilderTest extends Assertions {
 
   def builder: PlanBuilder
   def context:PlanContext=null
+}
+
+trait SlotBuilderTest extends BuilderTest with MockitoSugar {
+
+  override val context = mock[PlanContext]
+  val tracker = new NameSlotTracker
+  when(context.slots).thenReturn(tracker)
 }
